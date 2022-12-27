@@ -1,0 +1,60 @@
+plugins {
+    id 'net.minecraftforge.gradle' version '5.1.+'
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
+}
+
+group = 'com.github.naterepos'
+version = '1.0.0'
+archivesBaseName = 'ForgeBookshelf'
+
+java {
+    archivesBaseName = 'forgebookshelf'
+    toolchain.languageVersion = JavaLanguageVersion.of(11)
+}
+
+minecraft {
+    mappings channel: 'snapshot', version: '20210309-1.16.5'
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.39'
+    implementation fileTree(dir: "libs", includes: ["*.jar"])
+    shadow 'org.spongepowered:configurate-hocon:4.1.2'
+}
+
+configurations {
+    provided
+    compile.extendsFrom provided
+    compileJava.options.encoding = "UTF-8"
+    jar.archiveName = rootProject.name + "-" + project.version + '.jar'
+    compileJava.options.fork = true
+}
+
+reobf { shadowJar }
+
+shadowJar {
+    configurations = [project.configurations.shadow]
+    archiveFileName = project.name + "-" + project.version + ".jar"
+    relocate 'org.spongepowered', 'com.github.naterepos.shadow.sponge'
+    relocate 'io.leangen', 'com.github.naterepos.shadow.leangen'
+    relocate 'com.typesafe', 'com.github.naterepos.shadow.typesafe'
+}
+
+task versionedRelease(type: Copy) {
+    group "build"
+    from('build/libs/' + rootProject.name + '.jar')
+    into('release/')
+    include '*.jar'
+    rename { String filename ->
+        filename.replace(".jar", "-${project.version}.jar")
+    }
+}
+
+jar.finalizedBy('shadowJar', 'reobfJar')
+tasks.build.finalizedBy('versionedRelease')
+
